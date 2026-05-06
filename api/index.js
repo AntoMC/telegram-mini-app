@@ -1,37 +1,37 @@
 const { Telegraf } = require('telegraf');
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// Lógica para cuando escribes @tu_bot en cualquier chat
+// Manejador Inline
 bot.on('inline_query', async (ctx) => {
     const query = ctx.inlineQuery.query;
     if (!query) return;
 
-    const results = [{
-        type: 'article',
-        id: '1',
-        title: 'Clic aquí para enviar Cita Real',
-        description: query,
-        input_message_content: {
-            message_text: `<blockquote>${query}</blockquote>`,
-            parse_mode: 'HTML'
-        }
-    }];
-
-    // Responder a Telegram con el resultado
-    return await ctx.answerInlineQuery(results);
+    try {
+        await ctx.answerInlineQuery([{
+            type: 'article',
+            id: String(Math.random()), // ID único siempre
+            title: 'ENVIAR COMO CITA REAL',
+            description: query,
+            input_message_content: {
+                message_text: `<blockquote>${query}</blockquote>`,
+                parse_mode: 'HTML'
+            }
+        }], { cache_time: 0 }); // Evitar caché para pruebas
+    } catch (e) {
+        console.error("Error inline:", e);
+    }
 });
 
+// Obligatorio para Webhooks en Vercel
 module.exports = async (req, res) => {
-    try {
-        if (req.method === 'POST') {
-            // Procesar la actualización que envía Telegram
+    if (req.method === 'POST') {
+        try {
             await bot.handleUpdate(req.body);
             res.status(200).json({ ok: true });
-        } else {
-            res.status(200).send("Bot Online y listo para Modo Inline 🚀");
+        } catch (err) {
+            res.status(500).send(err.toString());
         }
-    } catch (e) {
-        console.error("Error:", e);
-        res.status(500).send(e.message);
+    } else {
+        res.status(200).send("Servidor Activo 🚀");
     }
 };
