@@ -1,5 +1,7 @@
 const { Telegraf } = require('telegraf');
-const bot = new Telegraf(process.env.BOT_TOKEN);
+
+// Asegúrate de tener el token en tus variables de entorno o cámbialo por el string para pruebas
+const bot = new Telegraf(process.env.BOT_TOKEN || 'TU_TOKEN_AQUI');
 
 const maps = {
     script: { a: "𝓪", b: "𝓫", c: "𝓬", d: "𝓭", e: "𝓮", f: "𝓯", g: "𝓰", h: "𝓱", i: "𝓲", j: "𝓳", k: "𝓴", l: "𝓵", m: "𝓶", n: "𝓷", o: "𝓸", p: "𝓹", q: "𝓺", r: "𝓻", s: "𝓼", t: "𝓽", u: "𝓾", v: "𝓿", w: "𝔀", x: "𝔁", y: "𝔂", z: "𝔃", A: "𝓐", B: "𝓑", C: "𝓒", D: "𝓓", E: "𝓔", F: "𝓕", G: "𝓖", H: "𝓗", I: "𝓘", J: "𝓙", K: "𝓚", L: "𝓛", M: "𝓜", N: "𝓝", O: "𝓞", P: "𝓟", Q: "𝓠", R: "𝓡", S: "𝓢", T: "𝓣", U: "𝓤", V: "𝓥", W: "𝓦", X: "𝓧", Y: "𝓨", Z: "𝓩" },
@@ -12,24 +14,23 @@ const stylize = (text, type) => text.split('').map(char => (maps[type] && maps[t
 
 bot.on('inline_query', async (ctx) => {
     const query = ctx.inlineQuery.query;
-    if (!query) return;
+    if (!query || query.trim().length === 0) return;
 
     let text = query;
     let preferredOption = null;
 
-    // --- LÓGICA DE PROCESAMIENTO PARA LKEYBOARD ---
+    // --- LÓGICA LKEYBOARD ---
     if (query.startsWith('LKeyboard ')) {
         const parts = query.split(' ');
         if (parts.length >= 2) {
-            const command = parts[1]; // q, s, qFF0000, etc.
-            text = parts.slice(2).join(' '); // El texto real sin el comando
-            
-            if (command.startsWith('q')) preferredOption = '3'; // Priorizar Cita
-            if (command.startsWith('s')) preferredOption = '4'; // Priorizar Estilo
+            const command = parts[1];
+            text = parts.slice(2).join(' ');
+            if (command.startsWith('q')) preferredOption = '3'; // Cita
+            if (command.startsWith('s')) preferredOption = '4'; // Estilo
         }
     }
 
-    if (!text) return;
+    if (!text || text.trim().length === 0) return;
 
     let results = [
         { type: 'article', id: '1', title: '👻 SPOILER (Oculto)', description: text, input_message_content: { message_text: `<tg-spoiler>${text}</tg-spoiler>`, parse_mode: 'HTML' } },
@@ -41,23 +42,36 @@ bot.on('inline_query', async (ctx) => {
         { type: 'article', id: '7', title: '🏢 SMALL CAPS', description: stylize(text, 'smallcaps'), input_message_content: { message_text: stylize(text, 'smallcaps') } }
     ];
 
-    // Si sabemos qué quiere el teclado, ponemos esa opción primero
+    // Ordenar si hay preferencia
     if (preferredOption) {
         results.sort((a, b) => a.id === preferredOption ? -1 : b.id === preferredOption ? 1 : 0);
     }
 
-    return await ctx.answerInlineQuery(results, { cache_time: 0 });
+    try {
+        return await ctx.answerInlineQuery(results, { cache_time: 1 });
+    } catch (error) {
+        console.error("Error al responder inline query:", error);
+    }
 });
 
+// --- MODO DE EJECUCIÓN ---
+
+// 1. SI ESTÁS EN LOCAL (Node.js):
+if (process.env.NODE_ENV !== 'production') {
+    bot.launch().then(() => console.log("Bot corriendo en modo local"));
+}
+
+// 2. SI ESTÁS EN PRODUCCIÓN (Vercel/Webhooks):
 module.exports = async (req, res) => {
-    if (req.method === 'POST') { 
+    if (req.method === 'POST') {
         try {
-            await bot.handleUpdate(req.body); 
-            res.status(200).send('OK'); 
+            await bot.handleUpdate(req.body);
+            res.status(200).send('OK');
         } catch (e) {
             console.error(e);
             res.status(500).send('Error');
         }
+    } else {
+        res.status(200).send('LKeyboard Bot v2.1 🚀');
     }
-    else res.status(200).send('LKeyboard Bot v2.1 🚀');
 };
