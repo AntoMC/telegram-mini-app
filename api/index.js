@@ -8,26 +8,56 @@ const maps = {
     smallcaps: { a: "ᴀ", b: "ʙ", c: "ᴄ", d: "ᴅ", e: "ᴇ", f: "ꜰ", g: "ɢ", h: "ʜ", i: "ɪ", j: "ᴊ", k: "ᴋ", l: "ʟ", m: "ᴍ", n: "ɴ", o: "ᴏ", p: "ᴘ", q: "ǫ", r: "ʀ", s: "s", t: "ᴛ", u: "ᴜ", v: "ᴠ", w: "ᴡ", x: "x", y: "ʏ", z: "ᴢ" }
 };
 
-const stylize = (text, type) => text.split('').map(char => (maps[type] && maps[type][char.toLowerCase()]) || char).join('');
+const stylize = (text, type) => text.split('').map(char => (maps[type] && maps[type][char]) || (maps[type] && maps[type][char.toLowerCase()]) || char).join('');
 
 bot.on('inline_query', async (ctx) => {
     const query = ctx.inlineQuery.query;
     if (!query) return;
 
-    const results = [
-        { type: 'article', id: '1', title: '👻 SPOILER (Oculto)', description: 'Toca para revelar', input_message_content: { message_text: `<tg-spoiler>${query}</tg-spoiler>`, parse_mode: 'HTML' } },
-        { type: 'article', id: '2', title: '✍️ Subrayado Real', description: query, input_message_content: { message_text: `<u>${query}</u>`, parse_mode: 'HTML' } },
-        { type: 'article', id: '3', title: '📌 Cita de Bloque', description: query, input_message_content: { message_text: `<blockquote>${query}</blockquote>`, parse_mode: 'HTML' } },
-        { type: 'article', id: '4', title: '💎 Estilo Elegante', description: stylize(query, 'script'), input_message_content: { message_text: stylize(query, 'script') } },
-        { type: 'article', id: '5', title: '🕸 Estilo Gótico', description: stylize(query, 'gothic'), input_message_content: { message_text: stylize(query, 'gothic') } },
-        { type: 'article', id: '6', title: '⚫ Burbujas Negras', description: stylize(query, 'bubbles_dark'), input_message_content: { message_text: stylize(query, 'bubbles_dark') } },
-        { type: 'article', id: '7', title: '🏢 SMALL CAPS', description: stylize(query, 'smallcaps'), input_message_content: { message_text: stylize(query, 'smallcaps') } }
+    let text = query;
+    let preferredOption = null;
+
+    // --- LÓGICA DE PROCESAMIENTO PARA LKEYBOARD ---
+    if (query.startsWith('LKeyboard ')) {
+        const parts = query.split(' ');
+        if (parts.length >= 2) {
+            const command = parts[1]; // q, s, qFF0000, etc.
+            text = parts.slice(2).join(' '); // El texto real sin el comando
+            
+            if (command.startsWith('q')) preferredOption = '3'; // Priorizar Cita
+            if (command.startsWith('s')) preferredOption = '4'; // Priorizar Estilo
+        }
+    }
+
+    if (!text) return;
+
+    let results = [
+        { type: 'article', id: '1', title: '👻 SPOILER (Oculto)', description: text, input_message_content: { message_text: `<tg-spoiler>${text}</tg-spoiler>`, parse_mode: 'HTML' } },
+        { type: 'article', id: '2', title: '✍️ Subrayado Real', description: text, input_message_content: { message_text: `<u>${text}</u>`, parse_mode: 'HTML' } },
+        { type: 'article', id: '3', title: '📌 Cita de Bloque', description: text, input_message_content: { message_text: `<blockquote>${text}</blockquote>`, parse_mode: 'HTML' } },
+        { type: 'article', id: '4', title: '💎 Estilo Elegante', description: stylize(text, 'script'), input_message_content: { message_text: stylize(text, 'script') } },
+        { type: 'article', id: '5', title: '🕸 Estilo Gótico', description: stylize(text, 'gothic'), input_message_content: { message_text: stylize(text, 'gothic') } },
+        { type: 'article', id: '6', title: '⚫ Burbujas Negras', description: stylize(text, 'bubbles_dark'), input_message_content: { message_text: stylize(text, 'bubbles_dark') } },
+        { type: 'article', id: '7', title: '🏢 SMALL CAPS', description: stylize(text, 'smallcaps'), input_message_content: { message_text: stylize(text, 'smallcaps') } }
     ];
+
+    // Si sabemos qué quiere el teclado, ponemos esa opción primero
+    if (preferredOption) {
+        results.sort((a, b) => a.id === preferredOption ? -1 : b.id === preferredOption ? 1 : 0);
+    }
 
     return await ctx.answerInlineQuery(results, { cache_time: 0 });
 });
 
 module.exports = async (req, res) => {
-    if (req.method === 'POST') { await bot.handleUpdate(req.body); res.status(200).send('OK'); }
-    else res.status(200).send('Magic Bot v2 🚀');
+    if (req.method === 'POST') { 
+        try {
+            await bot.handleUpdate(req.body); 
+            res.status(200).send('OK'); 
+        } catch (e) {
+            console.error(e);
+            res.status(500).send('Error');
+        }
+    }
+    else res.status(200).send('LKeyboard Bot v2.1 🚀');
 };
