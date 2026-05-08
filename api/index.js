@@ -1,87 +1,60 @@
 const { Telegraf } = require('telegraf');
 
-// Asegúrate de que el TOKEN esté bien configurado en tu plataforma de hosting
-const bot = new Telegraf(process.env.BOT_TOKEN);
-
-const maps = {
-    script: { a: "𝓪", b: "𝓫", c: "𝓬", d: "𝓭", e: "𝓮", f: "𝓯", g: "𝓰", h: "𝓱", i: "𝓲", j: "𝓳", k: "𝓴", l: "𝓵", m: "𝓶", n: "𝓷", o: "𝓸", p: "𝓹", q: "𝓺", r: "𝓻", s: "𝓼", t: "𝓽", u: "𝓾", v: "𝓿", w: "𝔀", x: "𝔁", y: "𝔂", z: "𝔃", A: "𝓐", B: "𝓑", C: "𝓒", D: "𝓓", E: "𝓔", F: "𝓕", G: "𝓖", H: "𝓗", I: "𝓘", J: "𝓙", K: "𝓚", L: "𝓛", M: "𝓜", N: "𝓝", O: "𝓞", P: "𝓟", Q: "𝓠", R: "𝓡", S: "𝓢", T: "𝓣", U: "𝓤", V: "𝓥", W: "𝓦", X: "𝓧", Y: "𝓨", Z: "𝓩" },
-    gothic: { a: "𝔞", b: "𝔟", c: "𝔠", d: "𝔡", e: "𝔢", f: "𝔣", g: "𝔤", h: "𝔥", i: "𝔦", j: "𝔧", k: "𝔨", l: "𝔩", m: "𝔪", n: "𝔫", o: "𝔬", p: "𝔭", q: "𝔮", r: "𝔯", s: "𝔰", t: "𝔱", u: "𝔲", v: "𝔳", w: "𝔴", x: "𝔵", y: "𝔶", z: "𝔷", A: "𝔄", B: "𝔅", C: "ℭ", D: "𝔇", E: "𝔈", F: "𝔉", G: "𝔊", H: "ℌ", I: "ℑ", J: "𝔍", K: "𝔎", L: "𝔏", M: "𝔐", N: "𝔑", O: "𝔒", P: "𝔓", Q: "𝔔", R: "ℜ", S: "𝔖", T: "𝔗", U: "𝔘", V: "𝔙", W: "𝔚", X: "𝔛", Y: "𝔜", Z: "ℨ" },
-    bubbles_dark: { a: "🅐", b: "🅑", c: "🅒", d: "🅓", e: "🅔", f: "🅕", g: "🅖", h: "🅗", i: "🅘", j: "🅙", k: "🅚", l: "🅛", m: "🅜", n: "🅝", o: "🅞", p: "🅟", q: "🅠", r: "🅡", s: "🅢", t: "🅣", u: "🅤", v: "🅥", w: "🅦", x: "🅧", y: "🅨", z: "🅩", A: "🅐", B: "🅑", C: "🅒", D: "🅓", E: "🅔", F: "🅕", G: "🅖", H: "🅗", I: "🅘", J: "🅙", K: "🅚", L: "🅛", M: "🅜", N: "🅝", O: "🅞", P: "🅟", Q: "🅠", R: "🅡", S: "🅢", T: "🅣", U: "🅤", V: "🅥", W: "🅦", X: "🅧", Y: "🅨", Z: "🅩" },
-    smallcaps: { a: "ᴀ", b: "ʙ", c: "ᴄ", d: "ᴅ", e: "ᴇ", f: "ꜰ", g: "ɢ", h: "ʜ", i: "ɪ", j: "ᴊ", k: "ᴋ", l: "ʟ", m: "ᴍ", n: "ɴ", o: "ᴏ", p: "ᴘ", q: "ǫ", r: "ʀ", s: "s", t: "ᴛ", u: "ᴜ", v: "ᴠ", w: "ᴡ", x: "x", y: "ʏ", z: "ᴢ" }
-};
-
-const stylize = (text, type) => {
-    if (!text) return "";
-    return text.split('').map(char => {
-        if (maps[type] && maps[type][char]) return maps[type][char];
-        if (maps[type] && maps[type][char.toLowerCase()]) return maps[type][char.toLowerCase()];
-        return char;
-    }).join('');
-};
+// Sustituye con el Token que te dio el BotFather
+const bot = new Telegraf('TU_TOKEN_DE_TELEGRAM');
 
 bot.on('inline_query', async (ctx) => {
-    try {
-        const query = ctx.inlineQuery.query;
-        if (!query) return;
+    const query = ctx.inlineQuery.query;
 
-        let text = query;
-        let preferredOptionId = null;
+    // Buscamos el patrón que envía el teclado: "LKeyboard q <texto>"
+    if (query.startsWith('LKeyboard q ')) {
+        const textToQuote = query.replace('LKeyboard q ', '').trim();
 
-        // --- DETECTAR Y LIMPIAR COMANDOS DEL TECLADO ---
-        // Si el teclado envía "@LKeyboard_bot LKeyboard q Hola"
-        if (query.includes('LKeyboard ')) {
-            const parts = query.split('LKeyboard ');
-            const commandAndText = parts[1].trim(); // "q Hola" o "s Hola"
-            
-            const firstSpaceIndex = commandAndText.indexOf(' ');
-            if (firstSpaceIndex !== -1) {
-                const command = commandAndText.substring(0, firstSpaceIndex); // "q"
-                text = commandAndText.substring(firstSpaceIndex + 1).trim(); // "Hola"
-                
-                if (command.startsWith('q')) preferredOptionId = '3'; // Cita
-                if (command.startsWith('s')) preferredOptionId = '4'; // Estilo
-            } else {
-                text = commandAndText;
-            }
-        }
-
-        if (!text || text.length === 0) return;
+        if (textToQuote.length === 0) return ctx.answerInlineQuery([]);
 
         const results = [
-            { type: 'article', id: '3', title: '📌 CITAR TEXTO', description: text, input_message_content: { message_text: `<blockquote>${text}</blockquote>`, parse_mode: 'HTML' } },
-            { type: 'article', id: '1', title: '👻 SPOILER (Oculto)', description: text, input_message_content: { message_text: `<tg-spoiler>${text}</tg-spoiler>`, parse_mode: 'HTML' } },
-            { type: 'article', id: '4', title: '💎 ESTILO ELEGANTE', description: stylize(text, 'script'), input_message_content: { message_text: stylize(text, 'script') } },
-            { type: 'article', id: '2', title: '✍️ SUBRAYADO', description: text, input_message_content: { message_text: `<u>${text}</u>`, parse_mode: 'HTML' } },
-            { type: 'article', id: '5', title: '🕸 ESTILO GÓTICO', description: stylize(text, 'gothic'), input_message_content: { message_text: stylize(text, 'gothic') } },
-            { type: 'article', id: '6', title: '⚫ BURBUJAS NEGRAS', description: stylize(text, 'bubbles_dark'), input_message_content: { message_text: stylize(text, 'bubbles_dark') } },
-            { type: 'article', id: '7', title: '🏢 SMALL CAPS', description: stylize(text, 'smallcaps'), input_message_content: { message_text: stylize(text, 'smallcaps') } }
+            {
+                type: 'article',
+                id: 'quote_' + Date.now(),
+                title: 'Enviar como Cita',
+                description: textToQuote,
+                thumb_url: 'https://img.icons8.com/color/96/quote-left.png', // Icono visual
+                input_message_content: {
+                    // Usamos HTML para aplicar el formato de bloque de cita (blockquote)
+                    message_text: `<blockquote>${escapeHtml(textToQuote)}</blockquote>`,
+                    parse_mode: 'HTML'
+                },
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: "✍️ Escrito con LKeyboard", url: "https://t.me/LKeyboard_bot" }
+                        ]
+                    ]
+                }
+            }
         ];
 
-        // Reordenar para que la opción elegida por el teclado salga arriba
-        if (preferredOptionId) {
-            results.sort((a, b) => a.id === preferredOptionId ? -1 : b.id === preferredOptionId ? 1 : 0);
-        }
-
-        return await ctx.answerInlineQuery(results, { cache_time: 0, is_personal: true });
-    } catch (error) {
-        console.error("Error en inline_query:", error);
+        return ctx.answerInlineQuery(results, { cache_time: 1 });
     }
+
+    // Respuesta por defecto si no hay match
+    return ctx.answerInlineQuery([]);
 });
 
-// Webhook para servidores como Vercel o Netlify
-module.exports = async (req, res) => {
-    if (req.method === 'POST') {
-        try {
-            await bot.handleUpdate(req.body);
-            res.status(200).send('OK');
-        } catch (err) {
-            console.error(err);
-            res.status(500).send('Error procesando update');
-        }
-    } else {
-        res.status(200).send('LKeyboard Bot está vivo! 🚀');
-    }
-};
+// Función auxiliar para evitar errores con caracteres especiales de HTML
+function escapeHtml(text) {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
-// Si lo corres localmente con "node index.js", descomenta la línea de abajo:
-// bot.launch().then(() => console.log("Bot iniciado!"));
+bot.launch().then(() => {
+    console.log('🚀 LKeyboard Bot en marcha...');
+});
+
+// Manejo de errores básico
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
