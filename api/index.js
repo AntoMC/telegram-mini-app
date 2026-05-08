@@ -1,7 +1,7 @@
 const { Telegraf } = require('telegraf');
 
-// SUSTITUYE 'TU_BOT_TOKEN' por tu token real si no usas variables de entorno
-const bot = new Telegraf(process.env.BOT_TOKEN || '8520167343:AAEFrsWdXOZfxRhwkqsQ7Cp7V_K-D7y8Q7U');
+// Asegúrate de que el TOKEN esté bien configurado en tu plataforma de hosting
+const bot = new Telegraf(process.env.BOT_TOKEN);
 
 const maps = {
     script: { a: "𝓪", b: "𝓫", c: "𝓬", d: "𝓭", e: "𝓮", f: "𝓯", g: "𝓰", h: "𝓱", i: "𝓲", j: "𝓳", k: "𝓴", l: "𝓵", m: "𝓶", n: "𝓷", o: "𝓸", p: "𝓹", q: "𝓺", r: "𝓻", s: "𝓼", t: "𝓽", u: "𝓾", v: "𝓿", w: "𝔀", x: "𝔁", y: "𝔂", z: "𝔃", A: "𝓐", B: "𝓑", C: "𝓒", D: "𝓓", E: "𝓔", F: "𝓕", G: "𝓖", H: "𝓗", I: "𝓘", J: "𝓙", K: "𝓚", L: "𝓛", M: "𝓜", N: "𝓝", O: "𝓞", P: "𝓟", Q: "𝓠", R: "𝓡", S: "𝓢", T: "𝓣", U: "𝓤", V: "𝓥", W: "𝓦", X: "𝓧", Y: "𝓨", Z: "𝓩" },
@@ -10,10 +10,14 @@ const maps = {
     smallcaps: { a: "ᴀ", b: "ʙ", c: "ᴄ", d: "ᴅ", e: "ᴇ", f: "ꜰ", g: "ɢ", h: "ʜ", i: "ɪ", j: "ᴊ", k: "ᴋ", l: "ʟ", m: "ᴍ", n: "ɴ", o: "ᴏ", p: "ᴘ", q: "ǫ", r: "ʀ", s: "s", t: "ᴛ", u: "ᴜ", v: "ᴠ", w: "ᴡ", x: "x", y: "ʏ", z: "ᴢ" }
 };
 
-// Función para limpiar caracteres que rompen el HTML de Telegram
-const escapeHTML = (str) => str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-
-const stylize = (text, type) => text.split('').map(char => (maps[type] && maps[type][char]) || (maps[type] && maps[type][char.toLowerCase()]) || char).join('');
+const stylize = (text, type) => {
+    if (!text) return "";
+    return text.split('').map(char => {
+        if (maps[type] && maps[type][char]) return maps[type][char];
+        if (maps[type] && maps[type][char.toLowerCase()]) return maps[type][char.toLowerCase()];
+        return char;
+    }).join('');
+};
 
 bot.on('inline_query', async (ctx) => {
     try {
@@ -21,67 +25,63 @@ bot.on('inline_query', async (ctx) => {
         if (!query) return;
 
         let text = query;
-        let preferredOption = null;
+        let preferredOptionId = null;
 
-        // Lógica de procesamiento LKeyboard
-        if (query.startsWith('LKeyboard ')) {
-            const parts = query.split(' ');
-            if (parts.length >= 2) {
-                const command = parts[1];
-                text = parts.slice(2).join(' ');
-                if (command.startsWith('q')) preferredOption = '3';
-                if (command.startsWith('s')) preferredOption = '4';
+        // --- DETECTAR Y LIMPIAR COMANDOS DEL TECLADO ---
+        // Si el teclado envía "@LKeyboard_bot LKeyboard q Hola"
+        if (query.includes('LKeyboard ')) {
+            const parts = query.split('LKeyboard ');
+            const commandAndText = parts[1].trim(); // "q Hola" o "s Hola"
+            
+            const firstSpaceIndex = commandAndText.indexOf(' ');
+            if (firstSpaceIndex !== -1) {
+                const command = commandAndText.substring(0, firstSpaceIndex); // "q"
+                text = commandAndText.substring(firstSpaceIndex + 1).trim(); // "Hola"
+                
+                if (command.startsWith('q')) preferredOptionId = '3'; // Cita
+                if (command.startsWith('s')) preferredOptionId = '4'; // Estilo
+            } else {
+                text = commandAndText;
             }
         }
 
-        if (!text.trim()) return;
+        if (!text || text.length === 0) return;
 
-        const safeText = escapeHTML(text);
-
-        let results = [
-            { type: 'article', id: '1', title: '👻 SPOILER (Oculto)', description: text, input_message_content: { message_text: `<tg-spoiler>${safeText}</tg-spoiler>`, parse_mode: 'HTML' } },
-            { type: 'article', id: '2', title: '✍️ Subrayado Real', description: text, input_message_content: { message_text: `<u>${safeText}</u>`, parse_mode: 'HTML' } },
-            { type: 'article', id: '3', title: '📌 Cita de Bloque', description: text, input_message_content: { message_text: `<blockquote>${safeText}</blockquote>`, parse_mode: 'HTML' } },
-            { type: 'article', id: '4', title: '💎 Estilo Elegante', description: stylize(text, 'script'), input_message_content: { message_text: stylize(text, 'script') } },
-            { type: 'article', id: '5', title: '🕸 Estilo Gótico', description: stylize(text, 'gothic'), input_message_content: { message_text: stylize(text, 'gothic') } },
-            { type: 'article', id: '6', title: '⚫ Burbujas Negras', description: stylize(text, 'bubbles_dark'), input_message_content: { message_text: stylize(text, 'bubbles_dark') } },
+        const results = [
+            { type: 'article', id: '3', title: '📌 CITAR TEXTO', description: text, input_message_content: { message_text: `<blockquote>${text}</blockquote>`, parse_mode: 'HTML' } },
+            { type: 'article', id: '1', title: '👻 SPOILER (Oculto)', description: text, input_message_content: { message_text: `<tg-spoiler>${text}</tg-spoiler>`, parse_mode: 'HTML' } },
+            { type: 'article', id: '4', title: '💎 ESTILO ELEGANTE', description: stylize(text, 'script'), input_message_content: { message_text: stylize(text, 'script') } },
+            { type: 'article', id: '2', title: '✍️ SUBRAYADO', description: text, input_message_content: { message_text: `<u>${text}</u>`, parse_mode: 'HTML' } },
+            { type: 'article', id: '5', title: '🕸 ESTILO GÓTICO', description: stylize(text, 'gothic'), input_message_content: { message_text: stylize(text, 'gothic') } },
+            { type: 'article', id: '6', title: '⚫ BURBUJAS NEGRAS', description: stylize(text, 'bubbles_dark'), input_message_content: { message_text: stylize(text, 'bubbles_dark') } },
             { type: 'article', id: '7', title: '🏢 SMALL CAPS', description: stylize(text, 'smallcaps'), input_message_content: { message_text: stylize(text, 'smallcaps') } }
         ];
 
-        if (preferredOption) {
-            results.sort((a, b) => a.id === preferredOption ? -1 : b.id === preferredOption ? 1 : 0);
+        // Reordenar para que la opción elegida por el teclado salga arriba
+        if (preferredOptionId) {
+            results.sort((a, b) => a.id === preferredOptionId ? -1 : b.id === preferredOptionId ? 1 : 0);
         }
 
-        return await ctx.answerInlineQuery(results, { cache_time: 1 });
-    } catch (err) {
-        console.error("Error procesando Inline Query:", err);
+        return await ctx.answerInlineQuery(results, { cache_time: 0, is_personal: true });
+    } catch (error) {
+        console.error("Error en inline_query:", error);
     }
 });
 
-// --- INICIO DEL BOT ---
-
-// Si estás en Vercel/Producción
+// Webhook para servidores como Vercel o Netlify
 module.exports = async (req, res) => {
     if (req.method === 'POST') {
         try {
             await bot.handleUpdate(req.body);
             res.status(200).send('OK');
-        } catch (e) {
-            console.error(e);
-            res.status(500).send('Error');
+        } catch (err) {
+            console.error(err);
+            res.status(500).send('Error procesando update');
         }
     } else {
-        res.status(200).send('LKeyboard Bot v2.1 🚀');
+        res.status(200).send('LKeyboard Bot está vivo! 🚀');
     }
 };
 
-// Si estás probando en tu PC (Modo Local)
-if (require.main === module || !process.env.VERCEL) {
-    bot.launch()
-        .then(() => console.log("✅ LKeyboard Bot corriendo en modo local"))
-        .catch(err => console.error("❌ Fallo al iniciar el bot:", err));
-}
-
-// Cierre limpio
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+// Si lo corres localmente con "node index.js", descomenta la línea de abajo:
+// bot.launch().then(() => console.log("Bot iniciado!"));
