@@ -2,8 +2,7 @@ const { Telegraf } = require('telegraf');
 const http = require('http');
 
 // 1. CONFIGURACIÓN DEL BOT
-const bot = new Telegraf('8520167343:AAEFrsWdXOZfxRhwkqsQ7Cp7V_K-D7y8Q7U');
-
+const bot = new Telegraf(process.env.BOT_TOKEN);
 bot.on('inline_query', async (ctx) => {
     try {
         const query = ctx.inlineQuery.query || '';
