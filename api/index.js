@@ -1,25 +1,20 @@
 const { Telegraf } = require('telegraf');
+const http = require('http');
 
-// SUSTITUYE TU TOKEN AQUÍ
+// 1. CONFIGURACIÓN DEL BOT
 const bot = new Telegraf('8520167343:AAEFrsWdXOZfxRhwkqsQ7Cp7V_K-D7y8Q7U');
 
 bot.on('inline_query', async (ctx) => {
     try {
         const query = ctx.inlineQuery.query || '';
-        console.log('Query recibida:', query); // Esto aparecerá en los logs de Vercel
-
-        // Buscamos "LKeyboard q <texto>" o simplemente "q <texto>"
-        // La expresión regular es más flexible
         const match = query.match(/^(?:LKeyboard\s+)?q\s+(.+)$/i);
         
         if (match) {
             const textToQuote = match[1].trim();
-            if (textToQuote.length === 0) return ctx.answerInlineQuery([]);
-
             return await ctx.answerInlineQuery([
                 {
                     type: 'article',
-                    id: 'q_' + Math.random().toString(36).substr(2, 9), // ID único aleatorio
+                    id: 'quote_' + Math.random().toString(36).substr(2, 9),
                     title: 'Enviar como Cita',
                     description: textToQuote,
                     thumb_url: 'https://img.icons8.com/color/96/quote-left.png',
@@ -28,34 +23,32 @@ bot.on('inline_query', async (ctx) => {
                         parse_mode: 'HTML'
                     }
                 }
-            ], { 
-                cache_time: 1, // Evita que se quede guardado mucho tiempo para poder probar rápido
-                is_personal: true 
-            });
+            ], { cache_time: 1 });
         }
-    } catch (error) {
-        console.error('Error procesando inline query:', error);
+    } catch (e) {
+        console.error('Error:', e);
     }
-    // Si no hay match o hay error, respondemos vacío para que deje de cargar
     return ctx.answerInlineQuery([]);
 });
 
-// Manejador para Vercel
-module.exports = async (req, res) => {
-    // Si entras desde el navegador (GET)
-    if (req.method === 'GET') {
-        return res.status(200).send('🚀 LKeyboard Bot está funcionando correctamente!');
-    }
+// 2. SERVIDOR HTTP (Necesario para Render)
+// Esto evita errores de "Port timeout" y ayuda a mantenerlo despierto
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('LKeyboard Bot is Alive!\n');
+});
 
-    // Si Telegram envía datos (POST)
-    try {
-        if (req.body && req.body.update_id) {
-            await bot.handleUpdate(req.body);
-        }
-        res.status(200).send('OK');
-    } catch (err) {
-        console.error('Error en el Webhook:', err);
-        // Enviamos 200 aunque haya error para que Telegram no reintente fallos de código
-        res.status(200).send('Error interno pero recibido');
-    }
-};
+// Render asigna un puerto automáticamente en process.env.PORT
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Servidor HTTP escuchando en puerto ${PORT}`);
+});
+
+// 3. INICIO DEL BOT
+bot.launch().then(() => {
+    console.log('🚀 Bot de Telegram iniciado con Long Polling');
+});
+
+// Manejo de cierre limpio
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
