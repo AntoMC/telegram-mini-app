@@ -1,12 +1,11 @@
 {
   "name": "lkeyboard-bot",
   "version": "1.0.0",
-  "description": "Bot para citas de LKeyboard",
-  "main": "api/index.js",
-  "scripts": {
-    "start": "node api/index.js"
-  },
+  "main": "index.js",
   "dependencies": {
     "telegraf": "^4.16.3"
+  },
+  "scripts": {
+    "start": "node index.js"
   }
 }
